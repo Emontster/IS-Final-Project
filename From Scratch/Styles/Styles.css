@@ -1,0 +1,43 @@
+body{
+    background-color: black;
+    color: white;
+    font-family:Georgia, 'Times New Roman', Times, serif;
+}
+h1, h2, h3, h4, h5, h6{
+    color:rgb(157, 28, 49);
+    font-style: italic;
+}
+.main-content{
+    margin-left:220px;
+    padding: 20px;
+}
+.sidebar{
+    background-color: rgb(39, 176, 176);
+    width:200px;
+    height:100%;
+    left:0;
+    padding:15px;
+    position:fixed;
+}
+.navbar{
+    background-color: black;
+    padding: 10px;
+    display:flex;
+    justify-content: space-around;
+    align-items: center;
+    color: white;
+}
+.navbar a{
+    color:white;
+}
+.sidebar {
+
+}
+
+.sidebar ul{
+    list-style: none;
+    padding: 0;
+}
+.sidebar ul li a:hover{
+    color: blue;
+}

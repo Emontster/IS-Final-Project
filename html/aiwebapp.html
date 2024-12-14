@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golfing Game with Levels</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87ceeb;
+        }
+        canvas {
+            background-color: #32cd32;
+            border: 2px solid black;
+        }
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard">
+        Level: <span id="level">1</span> | Strokes: <span id="strokes">0</span>
+    </div>
+    <div id="gameOver">
+        <p>Congratulations! You completed all 18 levels!</p>
+        <p>Total Strokes: <span id="totalStrokes">0</span></p>
+        <button onclick="restartGame()">Restart</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let ball = { x: 400, y: 300, radius: 10, dx: 0, dy: 0 };
+        let hole = { x: Math.random() * 750 + 25, y: Math.random() * 550 + 25, radius: 15 };
+        let obstacles = [];
+        let strokes = 0;
+        let totalStrokes = 0; // Total strokes across all levels
+        let level = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let dragEnd = { x: 0, y: 0 };
+
+        // Generate random obstacles ensuring they don't overlap with the hole
+        function generateObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 5; i++) {
+                let validPlacement = false;
+                while (!validPlacement) {
+                    const obstacle = {
+                        x: Math.random() * 700 + 50,
+                        y: Math.random() * 500 + 50,
+                        width: 50,
+                        height: 20,
+                    };
+
+                    const distToHole = Math.hypot(
+                        obstacle.x + obstacle.width / 2 - hole.x,
+                        obstacle.y + obstacle.height / 2 - hole.y
+                    );
+
+                    if (distToHole > hole.radius + 30) {
+                        obstacles.push(obstacle);
+                        validPlacement = true;
+                    }
+                }
+            }
+        }
+
+        // Draw the ball
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Draw the hole
+        function drawHole() {
+            ctx.beginPath();
+            ctx.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        }
+
+        // Draw obstacles
+        function drawObstacles() {
+            ctx.fillStyle = 'brown';
+            obstacles.forEach(obstacle => {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        // Draw the drag indicator
+        function drawDragIndicator() {
+            if (isDragging) {
+                ctx.beginPath();
+                ctx.moveTo(ball.x, ball.y);
+                ctx.lineTo(dragEnd.x, dragEnd.y);
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // Update ball position
+        function updateBall() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Friction
+            ball.dx *= 0.98;
+            ball.dy *= 0.98;
+
+            // Stop ball if velocity is very low
+            if (Math.abs(ball.dx) < 0.1) ball.dx = 0;
+            if (Math.abs(ball.dy) < 0.1) ball.dy = 0;
+
+            // Collision with walls
+            if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) ball.dx *= -1;
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) ball.dy *= -1;
+
+            // Collision with obstacles
+            obstacles.forEach(obstacle => {
+                if (
+                    ball.x + ball.radius > obstacle.x &&
+                    ball.x - ball.radius < obstacle.x + obstacle.width &&
+                    ball.y + ball.radius > obstacle.y &&
+                    ball.y - ball.radius < obstacle.y + obstacle.height
+                ) {
+                    ball.dx *= -1;
+                    ball.dy *= -1;
+                }
+            });
+        }
+
+        // Check for win
+        function checkWin() {
+            const dist = Math.hypot(ball.x - hole.x, ball.y - hole.y);
+            if (dist < ball.radius + hole.radius) {
+                totalStrokes += strokes; // Add strokes to total
+                if (level === 18) {
+                    document.getElementById('totalStrokes').textContent = totalStrokes;
+                    document.getElementById('gameOver').style.display = 'block';
+                } else {
+                    level++;
+                    resetLevel();
+                }
+            }
+        }
+
+        // Reset level
+        function resetLevel() {
+            ball = { x: 400, y: 300, radius: 10, dx: 0, dy: 0 };
+            hole = { x: Math.random() * 750 + 25, y: Math.random() * 550 + 25, radius: 15 };
+            strokes = 0;
+            generateObstacles();
+            document.getElementById('strokes').textContent = totalStrokes + strokes;
+            document.getElementById('level').textContent = level;
+        }
+
+        // Restart game
+        function restartGame() {
+            level = 1;
+            totalStrokes = 0;
+            resetLevel();
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawHole();
+            drawBall();
+            drawObstacles();
+            drawDragIndicator();
+            updateBall();
+            checkWin();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', (e) => {
+            dragStart = { x: e.offsetX, y: e.offsetY };
+            dragEnd = { x: e.offsetX, y: e.offsetY };
+            isDragging = true;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                dragEnd = { x: e.offsetX, y: e.offsetY };
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDragging) {
+                const velocityX = (dragStart.x - dragEnd.x) * 0.1;
+                const velocityY = (dragStart.y - dragEnd.y) * 0.1;
+                ball.dx = velocityX;
+                ball.dy = velocityY;
+                strokes++;
+                document.getElementById('strokes').textContent = totalStrokes + strokes;
+                isDragging = false;
+            }
+        });
+
+        // Start the game
+        generateObstacles();
+        gameLoop();
+    </script>
+</body>
+</html>
